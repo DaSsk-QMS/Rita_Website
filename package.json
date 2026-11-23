@@ -1,0 +1,16 @@
+{
+  "name": "rita-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RITA System Assurance website - Express API serving the React frontend (single Node.js app)",
+  "type": "module",
+  "main": "Server/src/server.js",
+  "scripts": {
+    "postinstall": "npm --prefix Server install --omit=dev --no-audit --no-fund",
+    "build": "npm --prefix Frontend install --include=dev --no-audit --no-fund && npm --prefix Frontend run build",
+    "start": "node Server/src/server.js"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}
