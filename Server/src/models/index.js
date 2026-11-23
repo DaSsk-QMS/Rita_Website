@@ -411,3 +411,15 @@ const visitSchema = new Schema(
 visitSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 400 });
 visitSchema.index({ path: 1, createdAt: -1 });
 export const Visit = model('Visit', visitSchema);
+
+// ---------- Server secrets (e.g. auto-generated JWT signing key) ----------
+export const AppSecret = model(
+  'AppSecret',
+  new Schema(
+    {
+      key: { type: String, required: true, unique: true },
+      value: { type: String, required: true, select: false },
+    },
+    opts
+  )
+);
