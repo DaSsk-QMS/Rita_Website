@@ -1,7 +1,6 @@
-import mongoose from 'mongoose';
+import { Schema, model } from '../db/odm.js';
 import bcrypt from 'bcryptjs';
 
-const { Schema, model } = mongoose;
 const opts = { timestamps: true };
 const seoFields = {
   seoTitle: { type: String, default: '' },
