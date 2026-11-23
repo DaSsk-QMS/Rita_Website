@@ -16,7 +16,7 @@ const formLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 15, message: { 
 const isEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''));
 const str = (v, max = 5000) => (v === undefined || v === null ? '' : String(v).trim().slice(0, max));
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const published = { status: 'published', publishedAt: { $lte: new Date() } };
+const publishedQ = () => ({ status: 'published', publishedAt: { $lte: new Date() } });
 const postCard = 'title slug excerpt coverImage category tags author publishedAt readingTime views featured';
 // Bots usually submit forms instantly; humans need a few seconds. `_t` is the time the form was rendered.
 const tooFast = (b) => b && b._t && Number.isFinite(Number(b._t)) && Date.now() - Number(b._t) < 2500;
@@ -43,7 +43,7 @@ r.get(
       Service.find({ active: true, featured: true }).sort({ order: 1 }).select('-content').lean(),
       Client.find({ active: true }).sort({ order: 1 }).lean(),
       Testimonial.find({ active: true }).sort({ order: 1 }).lean(),
-      Post.find(published).sort({ publishedAt: -1 }).limit(3).select(postCard).lean(),
+      Post.find(publishedQ()).sort({ publishedAt: -1 }).limit(3).select(postCard).lean(),
       Location.find({ active: true }).sort({ order: 1 }).select('name slug region headline intro image').lean(),
     ]);
     res.json({ slides, services, clients, testimonials, posts, locations });
@@ -103,7 +103,7 @@ r.get(
   asyncH(async (req, res) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(30, Number(req.query.limit) || 9);
-    const q = { ...published };
+    const q = { ...publishedQ() };
     if (req.query.category) q.category = str(req.query.category, 100);
     if (req.query.tag) q.tags = str(req.query.tag, 100);
     if (req.query.q) {
@@ -113,8 +113,8 @@ r.get(
     const [items, total, categories, tags] = await Promise.all([
       Post.find(q).sort({ featured: -1, publishedAt: -1 }).skip((page - 1) * limit).limit(limit).select(postCard).lean(),
       Post.countDocuments(q),
-      Post.aggregate([{ $match: published }, { $group: { _id: '$category', count: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
-      Post.aggregate([{ $match: published }, { $unwind: '$tags' }, { $group: { _id: '$tags', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 20 }]),
+      Post.aggregate([{ $match: publishedQ() }, { $group: { _id: '$category', count: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
+      Post.aggregate([{ $match: publishedQ() }, { $unwind: '$tags' }, { $group: { _id: '$tags', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 20 }]),
     ]);
     res.json({ items, total, page, pages: Math.ceil(total / limit) || 1, categories, tags });
   })
@@ -123,12 +123,12 @@ r.get(
 r.get(
   '/posts/:slug',
   asyncH(async (req, res) => {
-    const item = await Post.findOneAndUpdate({ slug: req.params.slug, ...published }, { $inc: { views: 1 } }, { new: true }).lean();
+    const item = await Post.findOneAndUpdate({ slug: req.params.slug, ...publishedQ() }, { $inc: { views: 1 } }, { new: true }).lean();
     if (!item) return res.status(404).json({ message: 'Article not found' });
     const [related, recent] = await Promise.all([
-      Post.find({ ...published, _id: { $ne: item._id }, $or: [{ category: item.category }, { tags: { $in: item.tags || [] } }] })
+      Post.find({ ...publishedQ(), _id: { $ne: item._id }, $or: [{ category: item.category }, { tags: { $in: item.tags || [] } }] })
         .sort({ publishedAt: -1 }).limit(3).select(postCard).lean(),
-      Post.find({ ...published, _id: { $ne: item._id } }).sort({ publishedAt: -1 }).limit(4).select(postCard).lean(),
+      Post.find({ ...publishedQ(), _id: { $ne: item._id } }).sort({ publishedAt: -1 }).limit(4).select(postCard).lean(),
     ]);
     res.json({ item, related, recent });
   })
@@ -144,7 +144,7 @@ r.get(
     const [services, posts, jobs] = await Promise.all([
       Service.find({ active: true, $or: [{ title: rx }, { shortDescription: rx }, { content: rx }, { features: rx }] })
         .select('title slug shortDescription icon image').limit(10).lean(),
-      Post.find({ ...published, $or: [{ title: rx }, { excerpt: rx }, { content: rx }, { tags: rx }] })
+      Post.find({ ...publishedQ(), $or: [{ title: rx }, { excerpt: rx }, { content: rx }, { tags: rx }] })
         .select(postCard).limit(10).lean(),
       Job.find({ active: true, $or: [{ title: rx }, { department: rx }, { description: rx }] })
         .select('title slug location type department').limit(10).lean(),
