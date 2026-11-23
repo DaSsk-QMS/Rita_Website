@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import slugify from 'slugify';
 import sanitizeHtml from 'sanitize-html';
-import mongoose from 'mongoose';
+import { isValidObjectId } from '../db/odm.js';
 
 export const asyncH = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
@@ -48,7 +48,7 @@ export function buildListQuery(req, { searchFields = [], filterFields = [] }) {
 }
 
 /**
- * Admin CRUD router for a mongoose model.
+ * Admin CRUD router for a data model.
  */
 export function crudRouter(Model, options = {}) {
   const {
@@ -93,7 +93,7 @@ export function crudRouter(Model, options = {}) {
   r.get(
     '/:id',
     asyncH(async (req, res) => {
-      if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Not found' });
+      if (!isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Not found' });
       const item = await Model.findById(req.params.id).lean();
       if (!item) return res.status(404).json({ message: 'Not found' });
       res.json(item);
