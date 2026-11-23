@@ -95,12 +95,17 @@ app.use((err, req, res, next) => {
   res.status(status).json({ message });
 });
 
-try {
-  await connectDB();
-  await ensureJwtSecret();
-  await ensureSeed();
-  app.listen(PORT, () => console.log(`🚀 API running on http://localhost:${PORT}`));
-} catch (err) {
-  console.error('❌ Failed to start:', err.message);
-  process.exit(1);
+async function start() {
+  try {
+    await connectDB();
+    await ensureJwtSecret();
+    await ensureSeed();
+    app.listen(PORT, () => console.log(`🚀 API running on http://localhost:${PORT}`));
+  } catch (err) {
+    console.error('❌ Failed to start:', err.message);
+    process.exit(1);
+  }
 }
+
+// No top-level await: some hosts (e.g. Hostinger / LiteSpeed lsnode) load the entry file with require().
+start();
