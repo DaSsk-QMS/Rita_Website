@@ -1,0 +1,181 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+/* Brand tokens — overwritten at runtime from Admin › Settings › Theme */
+:root {
+  --c-primary: #0b4fa8;
+  --c-secondary: #0a1a33;
+  --c-accent: #f5a524;
+  --c-bg: #ffffff;
+  --c-surface: #f4f7fb;
+  --c-text: #1d2939;
+  --font-head: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --radius: 14px;
+  --btn-radius: 9999px;
+  --anim-speed: 1;
+  --hero-overlay: 0.95;
+}
+
+@theme inline {
+  --color-primary: var(--c-primary);
+  --color-secondary: var(--c-secondary);
+  --color-accent: var(--c-accent);
+  --color-surface: var(--c-surface);
+  --color-ink: var(--c-text);
+  --font-heading: var(--font-head);
+  --font-sans: var(--font-body);
+  --radius-brand: var(--radius);
+  --radius-btn: var(--btn-radius);
+}
+
+@theme {
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-marquee-reverse: marquee 40s linear infinite reverse;
+  --animate-kenburns: kenburns 12s ease-out both;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-float-slow: float 9s ease-in-out infinite;
+  --animate-spin-slow: spin 18s linear infinite;
+  --animate-shimmer: shimmer 2.4s linear infinite;
+  --animate-gradient: gradient-pan 8s ease infinite;
+  --animate-aurora: aurora 18s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+  --animate-fade-in: fade-in 0.6s ease both;
+  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes kenburns { from { transform: scale(1.15); } to { transform: scale(1); } }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  @keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+  @keyframes gradient-pan { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  @keyframes aurora {
+    0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+    33% { transform: translate(8%, -6%) scale(1.15) rotate(20deg); }
+    66% { transform: translate(-6%, 8%) scale(0.92) rotate(-12deg); }
+  }
+  @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.7; } 100% { transform: scale(2.2); opacity: 0; } }
+  @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4, h5, .font-heading { font-family: var(--font-head); letter-spacing: -0.02em; }
+
+/* ---------- Component utilities (Tailwind v4 uses @utility so they can be composed with @apply) ---------- */
+@utility container-x { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+
+@utility btn {
+  @apply relative isolate inline-flex items-center justify-center gap-2 overflow-hidden px-6 py-3 text-sm font-semibold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60;
+  border-radius: var(--btn-radius);
+  /* shine sweep on hover */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.7s ease;
+  }
+  &:hover::after { transform: translateX(120%); }
+}
+@utility btn-primary { @apply btn bg-primary text-white shadow-lg shadow-primary/25 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30; }
+@utility btn-accent { @apply btn bg-accent text-secondary shadow-lg shadow-accent/30 hover:-translate-y-0.5 hover:brightness-105; }
+@utility btn-outline { @apply btn border border-white/40 text-white backdrop-blur hover:bg-white hover:text-secondary; }
+@utility btn-ghost { @apply btn border border-primary/20 text-primary hover:bg-primary hover:text-white; }
+
+@utility eyebrow {
+  @apply inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary;
+  &::before { content: ''; @apply h-0.5 w-8 rounded bg-accent; }
+}
+@utility card { @apply rounded-brand border border-slate-200/70 bg-white shadow-sm; }
+@utility input { @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10; }
+@utility label { @apply mb-1.5 block text-sm font-medium text-slate-700; }
+@utility glass { @apply border border-white/15 bg-white/10 backdrop-blur-xl; }
+@utility text-gradient { @apply bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient; }
+
+/* Subtle engineering grid background */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--c-primary) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--c-primary) 8%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+@utility bg-dots { background-image: radial-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px); background-size: 28px 28px; }
+
+/* Cursor spotlight card: --mx/--my are set by the useSpotlight hook */
+@utility spotlight {
+  position: relative;
+  &::before {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.4s;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--c-primary) 14%, transparent), transparent 60%);
+    z-index: 0;
+  }
+  &:hover::before { opacity: 1; }
+}
+
+/* Animated gradient border */
+@utility border-beam {
+  position: relative;
+  &::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(120deg, transparent 20%, var(--c-accent), var(--c-primary), transparent 80%) 0 0 / 300% 300%;
+    animation: gradient-pan 6s ease infinite;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+}
+
+/* Skeleton shimmer */
+@utility shimmer {
+  background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%) 0 0 / 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* Rich text from the CMS */
+.prose-brand { @apply prose prose-slate max-w-none prose-headings:font-heading prose-headings:text-secondary prose-a:text-primary prose-img:rounded-2xl prose-li:marker:text-accent; }
+
+/* Swiper pagination styled as progress bars */
+.hero-swiper .swiper-pagination { bottom: 2.5rem !important; text-align: left; }
+.hero-swiper .swiper-pagination-bullet { width: 36px; height: 4px; border-radius: 4px; background: rgba(255,255,255,.4); opacity: 1; transition: all .4s; }
+.hero-swiper .swiper-pagination-bullet-active { width: 64px; background: var(--c-accent); }
+.testi-swiper .swiper-pagination-bullet-active { background: var(--c-primary); }
+
+/* Hero autoplay progress */
+@keyframes hero-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.hero-progress { animation: hero-progress linear forwards; transform-origin: left; }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+/* Admin › Theme › Animations off */
+html.no-anim *, html.no-anim *::before, html.no-anim *::after { animation: none !important; transition-duration: 0.01ms !important; }
+
+/* Quill editor in admin */
+.ql-toolbar.ql-snow { border-radius: 12px 12px 0 0; border-color: #e2e8f0 !important; background: #f8fafc; }
+.ql-container.ql-snow { border-radius: 0 0 12px 12px; border-color: #e2e8f0 !important; min-height: 220px; font-size: 15px; }
+.ql-editor { min-height: 220px; }
+
+/* Thin scrollbars */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--c-primary) 35%, transparent) transparent; }
+
+::selection { background: var(--c-accent); color: var(--c-secondary); }
+
+/* Rail-line dash animation (home "Local presence" section) */
+@keyframes dash { to { stroke-dashoffset: -440; } }
