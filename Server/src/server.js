@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
@@ -9,6 +10,7 @@ import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { connectDB } from './config/db.js';
+import { AppSecret } from './models/index.js';
 import { ensureSeed } from './seed/seed.js';
 import { UPLOAD_DIR } from './middleware/upload.js';
 import authRoutes from './routes/auth.js';
@@ -21,15 +23,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.resolve(__dirname, '../../Frontend/dist');
 const PORT = process.env.PORT || 5000;
 
-const weakSecret = !process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || /change|dev-only/i.test(process.env.JWT_SECRET);
-if (weakSecret && process.env.NODE_ENV === 'production') {
-  console.error('❌ JWT_SECRET is missing or weak. Set a random value of 32+ characters in .env before running in production.');
-  console.error(`   Generate one with:  node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`);
+const isWeak = (v) => !v || v.length < 32 || /change|dev-only/i.test(v);
+if (process.env.JWT_SECRET && isWeak(process.env.JWT_SECRET) && process.env.NODE_ENV === 'production') {
+  console.error('❌ JWT_SECRET is weak. Use a random value of 32+ characters, or remove it to let the server generate one.');
   process.exit(1);
 }
-if (!process.env.JWT_SECRET) {
-  process.env.JWT_SECRET = 'dev-only-secret-change-me';
-  console.warn('⚠️  JWT_SECRET not set — using an insecure development secret.');
+
+/** No JWT_SECRET configured: generate a strong one once and keep it in the database. */
+async function ensureJwtSecret() {
+  if (!isWeak(process.env.JWT_SECRET)) return;
+  if (process.env.NODE_ENV !== 'production' && !process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = 'dev-only-secret-change-me';
+    console.warn('⚠️  JWT_SECRET not set — using an insecure development secret.');
+    return;
+  }
+  const key = 'jwtSecret';
+  let row = await AppSecret.findOne({ key }).select('+value');
+  if (!row) row = await AppSecret.create({ key, value: crypto.randomBytes(48).toString('hex') });
+  process.env.JWT_SECRET = row.value;
+  console.log('🔐 Using JWT secret stored in the database.');
 }
 
 const app = express();
@@ -85,6 +97,7 @@ app.use((err, req, res, next) => {
 
 try {
   await connectDB();
+  await ensureJwtSecret();
   await ensureSeed();
   app.listen(PORT, () => console.log(`🚀 API running on http://localhost:${PORT}`));
 } catch (err) {
