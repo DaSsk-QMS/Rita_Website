@@ -61,10 +61,12 @@ export async function ensureSeed({ reset = false } = {}) {
 }
 
 // Run directly: npm run seed  /  npm run seed:reset
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { connectDB, disconnectDB } = await import('../config/db.js');
-  await connectDB();
-  await ensureSeed({ reset: process.argv.includes('--reset') });
-  await disconnectDB();
-  console.log('Done.');
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  (async () => {
+    const { connectDB, disconnectDB } = await import('../config/db.js');
+    await connectDB();
+    await ensureSeed({ reset: process.argv.includes('--reset') });
+    await disconnectDB();
+    console.log('Done.');
+  })().catch((e) => { console.error(e); process.exit(1); });
 }
