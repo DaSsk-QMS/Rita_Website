@@ -343,6 +343,10 @@ class MemoryDriver {
     for (const [id, r] of t) if (r.createdAt && new Date(r.createdAt) < date) t.delete(id);
   }
   async close() {}
+  // Atomic counters
+  async counterEnsure(key, start) { this.counters ??= new Map(); if (!this.counters.has(key)) this.counters.set(key, start); }
+  async counterIncr(key, start) { await this.counterEnsure(key, start); const v = this.counters.get(key) + 1; this.counters.set(key, v); return v; }
+  async counterGet(key, start) { await this.counterEnsure(key, start); return this.counters.get(key); }
 }
 
 const toSqlDate = (d) => (d ? new Date(d) : null);
@@ -416,6 +420,27 @@ class MySqlDriver {
     await this.pool.query(`DELETE FROM ${this.t(name)} WHERE \`createdAt\` < ?`, [date]);
   }
   async close() { await this.pool.end(); }
+  // Atomic counters: a single SQL statement per increment, safe with concurrent requests / multiple processes.
+  async counterEnsure(key, start) {
+    await this.pool.query(
+      `CREATE TABLE IF NOT EXISTS ${this.t('site_counters')} (
+        \`k\` VARCHAR(64) NOT NULL PRIMARY KEY,
+        \`v\` BIGINT UNSIGNED NOT NULL DEFAULT 0
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+    );
+    await this.pool.query(`INSERT IGNORE INTO ${this.t('site_counters')} (\`k\`, \`v\`) VALUES (?, ?)`, [key, start]);
+  }
+  async counterIncr(key, start) {
+    // LAST_INSERT_ID(expr) hands the new value back on this connection without a second query.
+    const [res] = await this.pool.query(`UPDATE ${this.t('site_counters')} SET \`v\` = LAST_INSERT_ID(\`v\` + 1) WHERE \`k\` = ?`, [key]);
+    if (res.affectedRows) return Number(res.insertId);
+    await this.counterEnsure(key, start);
+    return this.counterIncr(key, start);
+  }
+  async counterGet(key, start) {
+    const [rows] = await this.pool.query(`SELECT \`v\` FROM ${this.t('site_counters')} WHERE \`k\` = ?`, [key]);
+    return rows.length ? Number(rows[0].v) : start;
+  }
 }
 
 // ---------------------------------------------------------------- connection
@@ -460,6 +485,13 @@ export async function disconnect() {
 const driver = () => {
   if (!state.driver) throw new Error('Database is not connected');
   return state.driver;
+};
+
+/** Persistent atomic counters (e.g. total site visits). `start` is the initial value. */
+export const counters = {
+  ensure: (key, start = 0) => driver().counterEnsure(key, start),
+  incr: (key, start = 0) => driver().counterIncr(key, start),
+  get: (key, start = 0) => driver().counterGet(key, start),
 };
 
 // ---------------------------------------------------------------- query objects

@@ -35,6 +35,7 @@ export function trackPageView(path) {
       timezone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return ''; } })(),
       ...ids(),
       isNew, // true for every page view in a visitor's very first session
+      hit: firstHit, // a fresh page load -> server adds 1 to the total visit counter
     };
     firstHit = false;
     fetch(`${API_URL}/api/public/track`, {
@@ -42,6 +43,32 @@ export function trackPageView(path) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       keepalive: true,
-    }).catch(() => {});
+    })
+      .then((r) => (r.status === 200 ? r.json() : null))
+      .then((d) => { if (d && typeof d.count === 'number') publishVisitCount(d.count); })
+      .catch(() => {});
   }, 300);
+}
+
+// ---------- Live total visit count ----------
+const VISIT_EVENT = 'rita:visits';
+let lastCount = null;
+function publishVisitCount(count) {
+  if (lastCount !== null && count < lastCount) return; // never show a lower number
+  lastCount = count;
+  window.dispatchEvent(new CustomEvent(VISIT_EVENT, { detail: count }));
+}
+
+export function fetchVisitCount() {
+  return fetch(`${API_URL}/api/public/visits`, { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => { if (d && typeof d.count === 'number') publishVisitCount(d.count); })
+    .catch(() => {});
+}
+
+export function onVisitCount(cb) {
+  if (lastCount !== null) cb(lastCount);
+  const h = (e) => cb(e.detail);
+  window.addEventListener(VISIT_EVENT, h);
+  return () => window.removeEventListener(VISIT_EVENT, h);
 }

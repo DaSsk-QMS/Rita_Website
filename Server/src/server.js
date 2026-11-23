@@ -10,7 +10,7 @@ import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { connectDB } from './config/db.js';
-import { AppSecret } from './models/index.js';
+import { AppSecret, visitCounter } from './models/index.js';
 import { ensureSeed } from './seed/seed.js';
 import { UPLOAD_DIR } from './middleware/upload.js';
 import authRoutes from './routes/auth.js';
@@ -100,6 +100,7 @@ async function start() {
     await connectDB();
     await ensureJwtSecret();
     await ensureSeed();
+    await visitCounter.ensure();
     app.listen(PORT, () => console.log(`🚀 API running on http://localhost:${PORT}`));
   } catch (err) {
     console.error('❌ Failed to start:', err.message);

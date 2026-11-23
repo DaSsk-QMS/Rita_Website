@@ -1,13 +1,40 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Clock, Mail, Menu, Phone, Search, X, ArrowRight, Megaphone, LogIn, LayoutDashboard } from 'lucide-react';
+import { ChevronDown, Clock, Mail, Menu, Phone, Search, X, ArrowRight, Megaphone, LogIn, LayoutDashboard, Eye } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSite } from '../../context/SiteContext.jsx';
 import { useScrolled } from '../../lib/hooks.js';
 import { DynIcon, SOCIAL_ICONS } from '../../lib/icons.jsx';
 import { Logo } from '../ui/Common.jsx';
 import SearchOverlay from './SearchOverlay.jsx';
+import { fetchVisitCount, onVisitCount } from '../../lib/analytics.js';
+
+// Total visits (every page load) — stored in DB, refreshed live.
+function useVisitCount() {
+  const [count, setCount] = useState(null);
+  useEffect(() => {
+    const off = onVisitCount(setCount);
+    fetchVisitCount();
+    const t = setInterval(() => { if (!document.hidden) fetchVisitCount(); }, 15000);
+    const onVis = () => { if (!document.hidden) fetchVisitCount(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { off(); clearInterval(t); document.removeEventListener('visibilitychange', onVis); };
+  }, []);
+  return count;
+}
+
+function VisitBadge({ count, className = '' }) {
+  if (count === null) return null;
+  return (
+    <span className={`inline-flex items-center gap-1.5 tabular-nums ${className}`} title="Total website visits" aria-label={`${count} total visits`} aria-live="polite">
+      <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-green-400" /></span>
+      <Eye size={14} />
+      <span className="font-bold">{count.toLocaleString('en-IN')}</span>
+      <span className="opacity-70">Visitors</span>
+    </span>
+  );
+}
 
 export function SocialLinks({ className = '', itemClass = '', size = 16 }) {
   const { settings } = useSite();
@@ -41,6 +68,7 @@ export default function Header() {
   const loginTo = user ? '/admin' : '/admin/login';
   const loginLabel = user ? 'Dashboard' : 'Login';
   const LoginIcon = user ? LayoutDashboard : LogIn;
+  const visits = useVisitCount();
   const { pathname } = useLocation();
   const scrolled = useScrolled(30);
   const [mobile, setMobile] = useState(false);
@@ -136,6 +164,7 @@ export default function Header() {
             </nav>
 
             <div className="flex items-center gap-2">
+              <VisitBadge count={visits} className={`rounded-full px-3 py-2 text-xs sm:text-sm ${transparent ? 'bg-white/10 text-white' : 'bg-primary/5 text-primary'}`} />
               <button onClick={() => setSearch(true)} aria-label="Search" className={`grid h-11 w-11 place-items-center rounded-full transition ${transparent ? 'text-white hover:bg-white/10' : 'text-secondary hover:bg-surface'}`}>
                 <Search size={20} />
               </button>

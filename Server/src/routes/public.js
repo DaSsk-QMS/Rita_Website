@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import UAParser from 'ua-parser-js';
 import {
   Slide, Service, Post, Category, Job, Application, Enquiry, GalleryItem,
-  Client, Testimonial, TeamMember, Subscriber, PageSeo, Visit, Feedback, Location,
+  Client, Testimonial, TeamMember, Subscriber, PageSeo, Visit, Feedback, Location, visitCounter,
 } from '../models/index.js';
 import { asyncH } from '../utils/crud.js';
 import { getSettings, publicSettings } from '../utils/settings.js';
@@ -309,6 +309,14 @@ r.get(
   })
 );
 
+// ---------- Live total visit count (every page load, stored in DB) ----------
+r.get(
+  '/visits',
+  asyncH(async (req, res) => {
+    res.set('Cache-Control', 'no-store').json({ count: await visitCounter.get() });
+  })
+);
+
 // ---------- Newsletter ----------
 r.post(
   '/subscribe',
@@ -337,6 +345,11 @@ r.post(
     const b = req.body || {};
     const path = str(b.path, 300);
     if (!path || path.startsWith('/admin') || BOT_RX.test(ua)) return res.status(204).end();
+    // Every new page load (not SPA route changes) adds 1 to the total, atomically.
+    let count;
+    if (b.hit === true) {
+      count = await visitCounter.incr();
+    }
     const p = new UAParser(ua).getResult();
     let referrer = str(b.referrer, 300);
     try {
@@ -354,6 +367,7 @@ r.post(
       isNewVisitor: b.isNew === true,
       ipHash: crypto.createHash('sha256').update(`${req.ip}${ua}`).digest('hex').slice(0, 16),
     });
+    if (count !== undefined) return res.json({ count });
     res.status(204).end();
   })
 );

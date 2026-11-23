@@ -1,4 +1,4 @@
-import { Schema, model } from '../db/odm.js';
+import { Schema, model, counters } from '../db/odm.js';
 import bcrypt from 'bcryptjs';
 
 const opts = { timestamps: true };
@@ -423,3 +423,13 @@ export const AppSecret = model(
     opts
   )
 );
+
+// ---------- Total visit counter (persistent, never expires) ----------
+// Counts every page load (not unique visitors). Stored in the `site_counters` table,
+// so it survives the Visit TTL cleanup. First start creates it at VISIT_COUNTER_START.
+export const VISIT_COUNTER_START = 300;
+export const visitCounter = {
+  ensure: () => counters.ensure('visits', VISIT_COUNTER_START),
+  incr: () => counters.incr('visits', VISIT_COUNTER_START),
+  get: () => counters.get('visits', VISIT_COUNTER_START),
+};
