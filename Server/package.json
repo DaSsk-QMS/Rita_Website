@@ -1,7 +1,7 @@
 {
   "name": "rita-website-server",
   "version": "1.0.0",
-  "description": "RITA System Assurance website API (Express + MongoDB)",
+  "description": "RITA System Assurance website API (Express + MySQL)",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
@@ -24,17 +24,16 @@
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.9.5",
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
     "nodemailer": "^6.10.0",
     "sanitize-html": "^2.14.0",
     "slugify": "^1.6.6",
-    "ua-parser-js": "^1.0.40"
+    "ua-parser-js": "^1.0.40",
+    "mysql2": "^3.11.5"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
-    "mongodb-memory-server": "^10.1.4",
     "nodemon": "^3.1.9"
   }
 }
